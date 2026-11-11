@@ -93,6 +93,10 @@ async function getPublicFileList(context, url, dir, recursive) {
             FileType: file.metadata?.FileType,
             TimeStamp: file.metadata?.TimeStamp,
             FileSize: file.metadata?.FileSize,
+            // Only publish public search tags, never full internal metadata.
+            Tags: Array.isArray(file.metadata?.Tags)
+                ? file.metadata.Tags.filter(tag => typeof tag === 'string' && tag.length <= 64).slice(0, 30)
+                : [],
         }
     }));
 
@@ -161,6 +165,7 @@ export async function onRequest(context) {
         // 获取高级搜索参数
         const recursive = url.searchParams.get('recursive') === 'true';
         const fileType = url.searchParams.get('type') || ''; // image, video, audio, other
+        const tag = (url.searchParams.get('tag') || '').trim().toLowerCase().slice(0, 64);
 
         // 检查目录权限
         if (!isAllowedDirectory(dir, allowedDirs)) {
@@ -205,6 +210,16 @@ export async function onRequest(context) {
         const isAudioFile = (name) => audioExts.includes(getFileExt(name));
 
         let filteredFiles = cachedData.files;
+        // Offer only tags found among authorized, non-blocked files.
+        const tags = [...new Set(cachedData.files.flatMap(file =>
+            Array.isArray(file.metadata?.Tags) ? file.metadata.Tags : []
+        ))].sort((a, b) => a.localeCompare(b, 'zh'));
+
+        if (tag) {
+            filteredFiles = filteredFiles.filter(file =>
+                (file.metadata?.Tags || []).some(value => value.toLowerCase() === tag)
+            );
+        }
 
         // 搜索过滤
         if (search) {
@@ -241,7 +256,8 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({
             files: safeFiles,
             directories: filteredDirectories,
-            totalCount: (search || fileType) ? filteredTotalCount : cachedData.totalCount,
+            totalCount: (search || fileType || tag) ? filteredTotalCount : cachedData.totalCount,
+            tags,
             returnedCount: safeFiles.length,
             allowedDirs: allowedDirs, // 返回允许的目录列表供前端使用
             fromCache: cachedData.fromCache,
