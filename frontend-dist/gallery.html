@@ -10,7 +10,7 @@
 :root{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei",system-ui,sans-serif;color:#252d32;background:#faf8f4}
 *{box-sizing:border-box}
 body{margin:0}
-button,input{font:inherit}
+button{font:inherit}
 button{cursor:pointer}
 a{color:inherit}
 header{background:#fff;border-bottom:1px solid #e9e6e0;position:sticky;top:0;z-index:5}
@@ -23,7 +23,6 @@ main{max-width:1300px;margin:auto;padding:25px 24px 70px}
 h1{font-size:28px;margin:0 0 7px}
 .explain{color:#697078;margin:0 0 20px;font-size:14px}
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-#search{max-width:100%;width:280px;border:1px solid #d9dde0;background:#fff;border-radius:11px;padding:11px 13px;outline-color:#587e9c}
 #count{color:#68727a;font-size:13px}
 .tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:23px}
 .tag{border:1px solid #e4ddd1;border-radius:99px;background:#fff;padding:6px 12px;font-size:13px;color:#4d5c66}
@@ -49,7 +48,7 @@ h1{font-size:28px;margin:0 0 7px}
 .overlay-footer .tag{background:#ffffff18;color:white;border-color:#ffffff36;margin:3px}
 .overlay-footer a{font-size:13px;text-decoration:underline}
 @media(max-width:1050px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:650px){.head{padding:12px 14px}.brand{font-size:20px}.admin{font-size:12px}main{padding:19px 13px 60px}h1{font-size:22px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.photo{border-radius:11px}.photo-info{padding:8px}.photo-image{aspect-ratio:1/1}.photo-tags .tag{font-size:11px;padding:3px 7px}#search{width:100%;flex:1 1 200px}.explain{font-size:13px}.overlay{padding:45px 8px 90px}}
+@media(max-width:650px){.head{padding:12px 14px}.brand{font-size:20px}.admin{font-size:12px}main{padding:19px 13px 60px}h1{font-size:22px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.photo{border-radius:11px}.photo-info{padding:8px}.photo-image{aspect-ratio:1/1}.photo-tags .tag{font-size:11px;padding:3px 7px}.explain{font-size:13px}.overlay{padding:45px 8px 90px}}
 </style>
 </head>
 <body>
@@ -61,7 +60,6 @@ h1{font-size:28px;margin:0 0 7px}
   <h1>照片相冊</h1>
   <p class="explain">依標籤探索生活紀錄，點選照片可放大瀏覽。</p>
   <div class="toolbar">
-    <input id="search" type="search" placeholder="搜尋照片檔名" autocomplete="off" aria-label="搜尋照片檔名">
     <span id="count"></span>
   </div>
   <nav id="tags" class="tags" aria-label="標籤篩選"></nav>
@@ -81,11 +79,9 @@ h1{font-size:28px;margin:0 0 7px}
 (function(){
 const $=id=>document.getElementById(id);
 const PAGE_SIZE=48;
-let items=[], offset=0, total=0, selected='', search='', allTags=[], loading=false, previewIndex=-1, serial=0;
+let items=[], offset=0, total=0, selected='', allTags=[], loading=false, previewIndex=-1, serial=0;
 const params=new URLSearchParams(location.search);
 selected=params.get('tag')||'';
-search=params.get('search')||'';
-$('search').value=search;
 function fileUrl(name){return '/file/'+String(name).split('/').map(encodeURIComponent).join('/');}
 function tagButton(name,active,click){
  const b=document.createElement('button'); b.type='button';b.className='tag'+(active?' active':'');b.textContent=name;b.addEventListener('click',click);return b;
@@ -93,7 +89,6 @@ function tagButton(name,active,click){
 function syncUrl(){
  const q=new URLSearchParams();
  if(selected)q.set('tag',selected);
- if(search)q.set('search',search);
  history.replaceState(null,'',location.pathname+(q.size?'?'+q:''));
 }
 function renderTags(){
@@ -124,7 +119,6 @@ async function loadMore(){
  try{
   const q=new URLSearchParams({dir:'',recursive:'true',start:String(offset),count:String(PAGE_SIZE)});
   if(selected)q.set('tag',selected);
-  if(search)q.set('search',search);
   const r=await fetch('/api/public/list?'+q.toString(),{credentials:'omit'});
   if(!r.ok)throw new Error('公開圖庫 API 回應 '+r.status);
   const data=await r.json();if(token!==serial)return;
@@ -170,10 +164,6 @@ document.addEventListener('keydown',e=>{
  if(e.key==='ArrowRight'&&previewIndex<items.length-1){previewIndex++;renderPreview();}
 });
 $('more').onclick=loadMore;
-let searchTimer;
-$('search').addEventListener('input',()=>{
- clearTimeout(searchTimer);searchTimer=setTimeout(()=>{search=$('search').value.trim();syncUrl();reset();},300);
-});
 reset();
 })();
 </script>
