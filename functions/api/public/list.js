@@ -60,19 +60,9 @@ function isAllowedDirectory(dir, allowedDirs) {
  * @returns {Promise<Object>} 文件列表和目录列表，包含 fromCache 字段
  */
 async function getPublicFileList(context, url, dir, recursive) {
-    // 构建缓存键（目录格式去掉末尾的/，与清除缓存时的格式一致）
-    const cacheDir = dir.replace(/\/$/, '');
-    const cacheKey = `${url.origin}/api/publicFileList?v=tags2&dir=${cacheDir}&recursive=${recursive}`;
-
-    // 检查缓存中是否有记录
-    const cache = caches.default;
-    const cacheRes = await cache.match(cacheKey);
-    if (cacheRes) {
-        const data = JSON.parse(await cacheRes.text());
-        data.fromCache = true;
-        return data;
-    }
-
+    // Do not cache the public listing: it must reflect new uploads, removals
+    // and tag edits immediately. The previous 24h Cache API entry was not
+    // invalidated because purgeCache.js used a different cache key.
     // 读取文件列表
     const result = await readIndex(context, {
         directory: dir,
@@ -106,16 +96,7 @@ async function getPublicFileList(context, url, dir, recursive) {
         totalCount: result.totalCount,
     };
 
-    // 缓存结果，缓存时间为24小时
-    await cache.put(cacheKey, new Response(JSON.stringify(cacheData), {
-        headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "public, max-age=86400",
-        }
-    }));
-
-    cacheData.fromCache = false;
-    return cacheData;
+    return { ...cacheData, fromCache: false };
 }
 
 export async function onRequest(context) {
