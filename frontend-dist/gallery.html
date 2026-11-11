@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>喜樂相冊 · 照片與標籤</title>
+<meta name="description" content="喜喜與樂樂的公開照片相冊，依標籤瀏覽與搜尋。">
+<style>
+:root{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei",system-ui,sans-serif;color:#252d32;background:#faf8f4}
+*{box-sizing:border-box}
+body{margin:0}
+button,input{font:inherit}
+button{cursor:pointer}
+a{color:inherit}
+header{background:#fff;border-bottom:1px solid #e9e6e0;position:sticky;top:0;z-index:5}
+.head{max-width:1300px;margin:auto;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{font-size:24px;font-weight:750;letter-spacing:.05em;text-decoration:none}
+.sub{font-size:12px;color:#777;margin-top:2px}
+.actions{display:flex;gap:16px;align-items:center}
+.admin{font-size:13px;color:#626972;text-decoration:none}
+main{max-width:1300px;margin:auto;padding:25px 24px 70px}
+h1{font-size:28px;margin:0 0 7px}
+.explain{color:#697078;margin:0 0 20px;font-size:14px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+#search{max-width:100%;width:280px;border:1px solid #d9dde0;background:#fff;border-radius:11px;padding:11px 13px;outline-color:#587e9c}
+#count{color:#68727a;font-size:13px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:23px}
+.tag{border:1px solid #e4ddd1;border-radius:99px;background:#fff;padding:6px 12px;font-size:13px;color:#4d5c66}
+.tag.active,.tag:hover{background:#344f61;border-color:#344f61;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.photo{border:1px solid #e9e4da;background:white;border-radius:15px;overflow:hidden;box-shadow:0 3px 16px #2c23130a}
+.photo-image{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#eae7e3;cursor:zoom-in}
+.photo-info{padding:10px 12px 12px}
+.filename{font-size:12px;color:#858585;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 0 9px}
+.photo-tags{display:flex;flex-wrap:wrap;gap:5px}
+.photo-tags .tag{padding:4px 9px;font-size:12px;background:#f0f5f6;border-color:#e1ebed;color:#344f61}
+.photo-tags .tag:hover{background:#344f61;color:#fff}
+.empty{padding:70px 12px;text-align:center;color:#797979}
+#more{display:none;margin:28px auto;padding:10px 25px;border:1px solid #cfd4d8;border-radius:10px;background:white}
+#status{font-size:13px;color:#697078;margin-bottom:10px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(12,19,25,.94);z-index:20;align-items:center;justify-content:center;flex-direction:column;padding:55px 18px 90px}
+.overlay.open{display:flex}
+.overlay img{max-width:100%;max-height:calc(100vh - 200px);object-fit:contain}
+.overlay .close{position:absolute;top:12px;right:20px;border:0;background:none;color:#fff;font-size:33px}
+.overlay .nav{position:absolute;top:48%;border:0;border-radius:8px;padding:12px;background:#ffffff20;color:white;font-size:25px}
+.overlay .prev{left:9px}.overlay .next{right:9px}
+.overlay-footer{color:#fff;text-align:center;position:absolute;bottom:16px;max-width:95vw}
+.overlay-footer .tag{background:#ffffff18;color:white;border-color:#ffffff36;margin:3px}
+.overlay-footer a{font-size:13px;text-decoration:underline}
+@media(max-width:1050px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.head{padding:12px 14px}.brand{font-size:20px}.admin{font-size:12px}main{padding:19px 13px 60px}h1{font-size:22px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.photo{border-radius:11px}.photo-info{padding:8px}.photo-image{aspect-ratio:1/1}.photo-tags .tag{font-size:11px;padding:3px 7px}#search{width:100%;flex:1 1 200px}.explain{font-size:13px}.overlay{padding:45px 8px 90px}}
+</style>
+</head>
+<body>
+<header><div class="head">
+  <div><a class="brand" href="/gallery.html">喜樂相冊</a><div class="sub">喜喜 · 樂樂</div></div>
+  <div class="actions"><a class="admin" href="/dashboard">管理後台</a></div>
+</div></header>
+<main>
+  <h1>照片相冊</h1>
+  <p class="explain">依標籤探索生活紀錄，點選照片可放大瀏覽。</p>
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="搜尋照片檔名" autocomplete="off" aria-label="搜尋照片檔名">
+    <span id="count"></span>
+  </div>
+  <nav id="tags" class="tags" aria-label="標籤篩選"></nav>
+  <div id="status" aria-live="polite"></div>
+  <div id="grid" class="grid"></div>
+  <button id="more" type="button">載入更多照片</button>
+</main>
+<div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-label="照片預覽">
+  <button id="close" class="close" aria-label="關閉預覽">×</button>
+  <button id="prev" class="nav prev" aria-label="上一張">‹</button>
+  <img id="large" alt="照片原圖">
+  <button id="next" class="nav next" aria-label="下一張">›</button>
+  <div id="overlay-footer" class="overlay-footer"></div>
+</div>
+<script>
+'use strict';
+(function(){
+const $=id=>document.getElementById(id);
+const PAGE_SIZE=48;
+let items=[], offset=0, total=0, selected='', search='', allTags=[], loading=false, previewIndex=-1, serial=0;
+const params=new URLSearchParams(location.search);
+selected=params.get('tag')||'';
+search=params.get('search')||'';
+$('search').value=search;
+function fileUrl(name){return '/file/'+String(name).split('/').map(encodeURIComponent).join('/');}
+function tagButton(name,active,click){
+ const b=document.createElement('button'); b.type='button';b.className='tag'+(active?' active':'');b.textContent=name;b.addEventListener('click',click);return b;
+}
+function syncUrl(){
+ const q=new URLSearchParams();
+ if(selected)q.set('tag',selected);
+ if(search)q.set('search',search);
+ history.replaceState(null,'',location.pathname+(q.size?'?'+q:''));
+}
+function renderTags(){
+ const box=$('tags');box.replaceChildren();
+ box.append(tagButton('全部照片',!selected,()=>chooseTag('')));
+ allTags.forEach(t=>box.append(tagButton(t,t===selected,()=>chooseTag(t))));
+ if(selected&&!allTags.includes(selected))box.append(tagButton(selected,true,()=>chooseTag('')));
+}
+function chooseTag(t){selected=selected===t?'':t;syncUrl();reset();}
+function fileTagNode(t){
+ return tagButton(t,false,e=>{e.stopPropagation();chooseTag(t);window.scrollTo({top:0,behavior:'smooth'});});
+}
+function renderCard(f){
+ const card=document.createElement('article');card.className='photo';
+ const img=document.createElement('img');img.className='photo-image';img.loading='lazy';img.src=fileUrl(f.name);img.alt=f.name;
+ img.addEventListener('click',()=>openPreview(f.name));
+ img.addEventListener('error',()=>{img.alt='無法載入照片';});
+ card.append(img);
+ const info=document.createElement('div');info.className='photo-info';
+ const filename=document.createElement('div');filename.className='filename';filename.title=f.name;filename.textContent=f.name.split('/').pop();info.append(filename);
+ const tags=document.createElement('div');tags.className='photo-tags';
+ (Array.isArray(f.metadata?.Tags)?f.metadata.Tags:[]).forEach(t=>tags.append(fileTagNode(t)));
+ info.append(tags);card.append(info);return card;
+}
+async function loadMore(){
+ if(loading||offset>=total&&offset!==0)return;
+ loading=true;const token=++serial;$('status').textContent='正在讀取照片…';$('more').style.display='none';
+ try{
+  const q=new URLSearchParams({dir:'',recursive:'true',start:String(offset),count:String(PAGE_SIZE)});
+  if(selected)q.set('tag',selected);
+  if(search)q.set('search',search);
+  const r=await fetch('/api/public/list?'+q.toString(),{credentials:'omit'});
+  if(!r.ok)throw new Error('公開圖庫 API 回應 '+r.status);
+  const data=await r.json();if(token!==serial)return;
+  const batch=(data.files||[]).filter(f=>/\.(jpe?g|png|gif|webp|avif|bmp)$/i.test(f.name));
+  // The API returns no private/blocked entries; do not fetch management endpoints.
+  items.push(...batch);offset+=(data.files||[]).length;total=data.totalCount||0;
+  if(Array.isArray(data.tags))allTags=data.tags;
+  renderTags();
+  batch.forEach(f=>$('grid').append(renderCard(f)));
+  $('count').textContent=String(total)+' 個檔案';
+  $('status').textContent=total===0?'沒有符合條件的照片':'';
+  $('more').style.display=offset<total?'block':'none';
+ }catch(e){if(token===serial)$('status').textContent='讀取失敗：'+e.message;}
+ finally{if(token===serial)loading=false;}
+}
+function reset(){
+ serial++;items=[];offset=0;total=0;loading=false;$('grid').replaceChildren();$('status').textContent='';
+ renderTags();loadMore();
+}
+function openPreview(name){
+ previewIndex=items.findIndex(f=>f.name===name);
+ if(previewIndex<0)return;
+ $('overlay').classList.add('open');document.body.style.overflow='hidden';renderPreview();
+}
+function renderPreview(){
+ const f=items[previewIndex];if(!f)return;
+ $('large').src=fileUrl(f.name);$('large').alt=f.name;
+ const footer=$('overlay-footer');footer.replaceChildren();
+ const cap=document.createElement('p');cap.textContent=f.name.split('/').pop()+' · '+(previewIndex+1)+' / '+items.length;footer.append(cap);
+ const tags=document.createElement('div');(f.metadata?.Tags||[]).forEach(t=>tags.append(tagButton(t,false,()=>{closePreview();chooseTag(t); })));footer.append(tags);
+ const a=document.createElement('a');a.href=fileUrl(f.name);a.target='_blank';a.rel='noopener';a.textContent='開啟原圖';footer.append(a);
+ $('prev').hidden=previewIndex===0;$('next').hidden=previewIndex===items.length-1;
+}
+function closePreview(){$('overlay').classList.remove('open');document.body.style.overflow='';$('large').removeAttribute('src');}
+$('close').onclick=closePreview;
+$('overlay').addEventListener('click',e=>{if(e.target===$('overlay'))closePreview();});
+$('prev').onclick=()=>{previewIndex=Math.max(0,previewIndex-1);renderPreview();};
+$('next').onclick=()=>{previewIndex=Math.min(items.length-1,previewIndex+1);renderPreview();};
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape')closePreview();
+ if(!$('overlay').classList.contains('open'))return;
+ if(e.key==='ArrowLeft'&&previewIndex>0){previewIndex--;renderPreview();}
+ if(e.key==='ArrowRight'&&previewIndex<items.length-1){previewIndex++;renderPreview();}
+});
+$('more').onclick=loadMore;
+let searchTimer;
+$('search').addEventListener('input',()=>{
+ clearTimeout(searchTimer);searchTimer=setTimeout(()=>{search=$('search').value.trim();syncUrl();reset();},300);
+});
+reset();
+})();
+</script>
+</body>
+</html>
